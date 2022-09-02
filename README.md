@@ -1,6 +1,8 @@
 # Ping Pong Scoreboard
 This ping pong scoreboard has implemented using Python and PyQT5.
 
+![Screenshot](doc/screenshot.png)
+
 ## Preparation
 ```
 pip3 install PyQT5
