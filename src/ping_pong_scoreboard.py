@@ -3,11 +3,16 @@ from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from PyQt5.QtCore import Qt, QPoint, QRect, QTimer
 
 from src.player_info import PlayerInfo
+from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
+from threading import Lock
 
-class PingPongScoreBoardApp(QWidget):
+class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
         super().__init__()
         self.init_app()
+
+    def __del__(self):
+        self.input_device_event_check_timer.stop()
 
     def init_app(self):
         self.MAX_SCORE_NUM = 11
@@ -20,7 +25,7 @@ class PingPongScoreBoardApp(QWidget):
         self.show_blink = False
         self.blink_count = 0
 
-        self.reset_scores()
+        self.do_reset_scores()
 
         self.setGeometry(0, 0, 1920, 1080)
 
@@ -55,8 +60,16 @@ class PingPongScoreBoardApp(QWidget):
         self.setWindowTitle("아푸지만 탁구 점수판")
         self.setStyleSheet("background-color:black;")
         self.showFullScreen()
-        # self.show()
 
+        # Start check timer for device Input
+        self.input_device_event_list_mutex = Lock()
+        self.input_device_event_list = []
+        self.input_device_event_check_timer = QTimer()
+        self.input_device_event_check_timer.setInterval(1)
+        self.input_device_event_check_timer.start()
+        self.input_device_event_check_timer.timeout.connect(self.do_check_device_input_event)
+
+        # self.show()
     def draw_scoreboard(self, qp):
         red_brush = QBrush(Qt.red)
         black_brush = QBrush(Qt.black)
@@ -112,14 +125,39 @@ class PingPongScoreBoardApp(QWidget):
 
         # Show who is a active server
 
+    def do_check_device_input_event(self):
+        if len(self.input_device_event_list) == 0:
+            return
+
+        self.input_device_event_list_mutex.acquire(True)
+
+        new_key_event = self.input_device_event_list[0]
+        self.input_device_event_list.pop(0)
+        self.input_device_event_list_mutex.release()
+
+        if new_key_event == InputDeviceEvent.INCREASE_HOME_SCORE:
+            self.do_increase_home_score()
+        elif new_key_event == InputDeviceEvent.DECREASE_HOME_SCORE:
+            self.do_decrease_home_score()
+        elif new_key_event == InputDeviceEvent.INCREASE_VISITOR_SCORE:
+            self.do_increase_visitor_score()
+        elif new_key_event == InputDeviceEvent.DECREASE_VISITOR_SCORE:
+            self.do_decrease_visitor_score()
+        elif new_key_event == InputDeviceEvent.SWITCH_PLAYER_SIDE:
+            self.do_switch_player_side()
+        elif new_key_event == InputDeviceEvent.SWITCH_SERVER:
+            self.do_switch_server()
+        elif new_key_event == InputDeviceEvent.RESET_SCORE:
+            self.do_reset_scores()
+    
     def do_inning_over(self):
         self.blink_count = 0
         self.show_blink = True
 
-        self.timer = QTimer()
-        self.timer.setInterval(self.BLINK_TIMER_INTERVAL)
-        self.timer.start()
-        self.timer.timeout.connect(self.do_blink_score)
+        self.inning_over_timer = QTimer()
+        self.inning_over_timer.setInterval(self.BLINK_TIMER_INTERVAL)
+        self.inning_over_timer.start()
+        self.inning_over_timer.timeout.connect(self.do_blink_score)
 
     def do_blink_score(self):
         self.blink_count = self.blink_count + 1
@@ -128,7 +166,7 @@ class PingPongScoreBoardApp(QWidget):
             self.show_blink = False
             self.blink_count = 0
 
-            self.timer.stop()
+            self.inning_over_timer.stop()
             self.left_player_info.score = 0
             self.right_player_info.score = 0
             self.update()
@@ -138,13 +176,32 @@ class PingPongScoreBoardApp(QWidget):
             else:
                 self.repaint(self.right_score_rect)
 
-    def increase_home_score(self):
+    def do_check_whether_server_is_switched(self):
+        if self.left_player_info.score >= self.MAX_SCORE_NUM - 1 and self.right_player_info.score >= self.MAX_SCORE_NUM - 1:
+            self.do_switch_server()
+            return True
+
+        if (self.left_player_info.score + self.right_player_info.score) % 2 == 0:
+            self.do_switch_server()
+            return True
+
+        return False
+
+
+    # Implement InputDeviceEventListener interface
+    def on_device_new_event(self, new_event):
+        self.input_device_event_list_mutex.acquire(True)
+        self.input_device_event_list.append(new_event)
+        self.input_device_event_list_mutex.release()
+
+    # 
+    def do_increase_home_score(self):
         if self.show_blink == True:
             return
 
         self.left_player_info.increase_score()
 
-        if self.check_whether_server_is_switched() == False:
+        if self.do_check_whether_server_is_switched() == False:
             self.repaint(self.left_score_rect)
 
         if self.left_player_info.score >= self.MAX_SCORE_NUM:
@@ -154,22 +211,22 @@ class PingPongScoreBoardApp(QWidget):
             self.left_player_info.increase_inning_score()
             self.do_inning_over()
 
-    def decrease_home_score(self):
+    def do_decrease_home_score(self):
         if self.show_blink == True:
             return
 
         self.left_player_info.decrease_score()
 
-        if self.check_whether_server_is_switched() == False:
+        if self.do_check_whether_server_is_switched() == False:
             self.repaint(self.left_score_rect)
 
-    def increase_visitor_score(self):
+    def do_increase_visitor_score(self):
         if self.show_blink == True:
             return
 
         self.right_player_info.increase_score()
 
-        if self.check_whether_server_is_switched() == False:
+        if self.do_check_whether_server_is_switched() == False:
             self.repaint(self.right_score_rect)
 
         if self.right_player_info.score >= self.MAX_SCORE_NUM:
@@ -179,16 +236,16 @@ class PingPongScoreBoardApp(QWidget):
             self.right_player_info.increase_inning_score()
             self.do_inning_over()
 
-    def decrease_visitor_score(self):
+    def do_decrease_visitor_score(self):
         if self.show_blink == True:
             return
 
         self.right_player_info.decrease_score()
 
-        if self.check_whether_server_is_switched() == False:
+        if self.do_check_whether_server_is_switched() == False:
             self.repaint(self.right_score_rect)
 
-    def switch_player_side(self):
+    def do_switch_player_side(self):
         if self.show_blink == True:
             return
 
@@ -199,18 +256,7 @@ class PingPongScoreBoardApp(QWidget):
         self.right_player_info.copy_from(temp_info)
         self.update()
 
-    def check_whether_server_is_switched(self):
-        if self.left_player_info.score >= self.MAX_SCORE_NUM - 1 and self.right_player_info.score >= self.MAX_SCORE_NUM - 1:
-            self.switch_server()
-            return True
-
-        if (self.left_player_info.score + self.right_player_info.score) % 2 == 0:
-            self.switch_server()
-            return True
-
-        return False
-
-    def switch_server(self):
+    def do_switch_server(self):
         if self.show_blink == True:
             return
 
@@ -223,7 +269,7 @@ class PingPongScoreBoardApp(QWidget):
 
         self.update()
 
-    def reset_scores(self):
+    def do_reset_scores(self):
         if self.show_blink == True:
             return
 
@@ -253,24 +299,31 @@ class PingPongScoreBoardApp(QWidget):
             return
 
         # Increase a left player score: '1'
-        if e.key() == Qt.Key_1: 
-            self.increase_home_score()
+        if e.key() == Qt.Key_1:
+            self.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
+            # self.do_increase_home_score()
         # Decrease a left player score: '2'
-        elif e.key() == Qt.Key_2: 
-            self.decrease_home_score()
+        elif e.key() == Qt.Key_2:
+            self.on_device_new_event(InputDeviceEvent.DECREASE_HOME_SCORE)
+            # self.do_decrease_home_score()
         # Increase a right player score: '3'
         elif e.key() == Qt.Key_3:
-            self.increase_visitor_score()
+            self.on_device_new_event(InputDeviceEvent.INCREASE_VISITOR_SCORE)
+            # self.do_increase_visitor_score()
         # Decrease a right player score: '4'
         elif e.key() == Qt.Key_4: 
-            self.decrease_visitor_score()
+            self.on_device_new_event(InputDeviceEvent.DECREASE_VISITOR_SCORE)
+            # self.do_decrease_visitor_score()
         # Switch a display score position for a players
         elif e.key() == Qt.Key_5:
-            self.switch_player_side()
+            self.on_device_new_event(InputDeviceEvent.SWITCH_PLAYER_SIDE)
+            # self.do_switch_player_side()
         # Switch a server
         elif e.key() == Qt.Key_9:
-            self.switch_server()
+            self.on_device_new_event(InputDeviceEvent.SWITCH_SERVER)
+            # self.do_switch_server()
         # Reset scores
         elif e.key() == Qt.Key_0:
-            self.reset_scores()
+            self.on_device_new_event(InputDeviceEvent.RESET_SCORE)
+            # self.do_reset_scores()
 
