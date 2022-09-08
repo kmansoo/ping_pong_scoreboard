@@ -6,6 +6,8 @@ from src.player_info import PlayerInfo
 from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
 from threading import Lock
 
+from src.ir_remote_device import IRRemoteDevice
+
 class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
         super().__init__()
@@ -68,6 +70,11 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.input_device_event_check_timer.setInterval(1)
         self.input_device_event_check_timer.start()
         self.input_device_event_check_timer.timeout.connect(self.do_check_device_input_event)
+
+        # Create Input Device
+        ir_device = IRRemoteDevice()
+        ir_device.set_event_listener(self)
+        ir_device.starting_service()
 
         # self.show()
     def draw_scoreboard(self, qp):
@@ -189,7 +196,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
 
     # Implement InputDeviceEventListener interface
-    def on_device_new_event(self, new_event):
+    def on_device_new_event(self, new_event : InputDeviceEvent):
         self.input_device_event_list_mutex.acquire(True)
         self.input_device_event_list.append(new_event)
         self.input_device_event_list_mutex.release()

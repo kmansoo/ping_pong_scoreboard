@@ -12,5 +12,5 @@ class InputDeviceEvent(Enum):
 class InputDeviceEventListener():
     """A PingPingScoreadBoard Input Device Event Listener"""
 
-    def on_device_new_event(self, new_event):
+    def on_device_new_event(self, new_event : InputDeviceEvent):
         pass
