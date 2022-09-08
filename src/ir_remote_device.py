@@ -1,13 +1,14 @@
+from xmlrpc.client import Boolean
 import RPi.GPIO as GPIO
 from datetime import datetime
 import time
 import threading
-from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
+from src.ping_pong_input_device import InputDevice, InputDeviceEventListener, InputDeviceEvent
 
 pin = 12
 
 
-class IRRemoteDevice:
+class IRRemoteDevice(InputDevice):
     def __init__(self) :
         self._work_thread = None
         self._event_listener = InputDeviceEventListener()
@@ -18,12 +19,12 @@ class IRRemoteDevice:
         self.ButtonsNames = ["key_0", "key_1", "key_2", "key_3", "key_4", "key_5", "key_6", "key_7", "key_8", "key_9", "key_100", "key_200", "key_channeldown", "key_channel", "key_channelup", "key_prev", "key_next", "key_play", "key_minus", "key_plus", "key_equal" ]
 
     def __del__(self):
-        self.stopping_service()
+        self.stop_service()
  
-    def set_event_listener(self, listener : InputDeviceEventListener):
+    def set_event_listener(self, listener : InputDeviceEventListener) -> None:
          self._event_listener = listener
 
-    def starting_service(self):
+    def start_service(self) -> Boolean:
         if self._work_thread != None:
             return False
 
@@ -34,7 +35,7 @@ class IRRemoteDevice:
 
         return True
 
-    def stopping_service(self):
+    def stop_service(self) -> Boolean:
         if self._work_thread == None:
             return False
 

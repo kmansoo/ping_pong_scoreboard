@@ -1,4 +1,6 @@
+import abc
 from enum import Enum
+from xmlrpc.client import Boolean
 
 class InputDeviceEvent(Enum):
     INCREASE_HOME_SCORE = 0
@@ -9,8 +11,21 @@ class InputDeviceEvent(Enum):
     SWITCH_SERVER = 5
     RESET_SCORE = 6
     
-class InputDeviceEventListener():
+class InputDeviceEventListener:
     """A PingPingScoreadBoard Input Device Event Listener"""
 
     def on_device_new_event(self, new_event : InputDeviceEvent):
         pass
+
+class InputDevice(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def set_event_listener(self, listener : InputDeviceEventListener) -> None:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def start_service(self) -> Boolean:
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def stop_service(self) -> Boolean:
+        raise NotImplemented
