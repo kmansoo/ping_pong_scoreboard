@@ -38,4 +38,14 @@ class IRRemoteDevice(InputDevice):
 
     def __run(self):
         while self._is_requesting_stop_thread == False:
+            # 장치에서 눌림 이벤트 확인
+            # 만일 이벤트가 있다면, 다음 함수를 호출
+            '''
+            if event == "0":
+                self._event_listener(InputDeviceEvent.INCREASE_HOME_SCORE)
+            elif event == "1:
+                self._event_listener(InputDeviceEvent.DECREASE_HOME_SCORE)
+            ...
+            '''
             time.sleep(0.01)   # 10ms  
+
