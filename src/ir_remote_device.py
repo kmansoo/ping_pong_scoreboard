@@ -1,4 +1,3 @@
-from xmlrpc.client import Boolean
 import RPi.GPIO as GPIO
 from datetime import datetime
 import time
@@ -24,7 +23,7 @@ class IRRemoteDevice(InputDevice):
     def set_event_listener(self, listener : InputDeviceEventListener) -> None:
          self._event_listener = listener
 
-    def start_service(self) -> Boolean:
+    def start_service(self) -> bool:
         if self._work_thread != None:
             return False
 
@@ -35,7 +34,7 @@ class IRRemoteDevice(InputDevice):
 
         return True
 
-    def stop_service(self) -> Boolean:
+    def stop_service(self) -> bool:
         if self._work_thread == None:
             return False
 

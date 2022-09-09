@@ -1,6 +1,6 @@
 import time
 import threading
-from xmlrpc.client import Boolean
+import random
 from src.ping_pong_input_device import InputDevice, InputDeviceEventListener, InputDeviceEvent
 
 class IRRemoteDevice(InputDevice):
@@ -14,7 +14,7 @@ class IRRemoteDevice(InputDevice):
     def set_event_listener(self, listener : InputDeviceEventListener) -> None:
          self._event_listener = listener
 
-    def start_service(self) -> Boolean:
+    def start_service(self) -> bool:
         if self._work_thread != None:
             return False
 
@@ -25,7 +25,7 @@ class IRRemoteDevice(InputDevice):
 
         return True
 
-    def stop_service(self) -> Boolean:
+    def stop_service(self) -> bool:
         if self._work_thread == None:
             return False
 
@@ -42,10 +42,18 @@ class IRRemoteDevice(InputDevice):
             # 만일 이벤트가 있다면, 다음 함수를 호출
             '''
             if event == "0":
-                self._event_listener(InputDeviceEvent.INCREASE_HOME_SCORE)
+                self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
             elif event == "1:
-                self._event_listener(InputDeviceEvent.DECREASE_HOME_SCORE)
+                self._event_listener.on_device_new_event(InputDeviceEvent.DECREASE_HOME_SCORE)
             ...
             '''
+            if random.randint(0, 30) == 10:
+                key_event = random.randint(0, 9)
+
+                if key_event == 0:
+                    self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
+                if key_event == 2:
+                    self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_VISITOR_SCORE)
+            
             time.sleep(0.01)   # 10ms  
 

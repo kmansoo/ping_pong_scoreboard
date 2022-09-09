@@ -1,6 +1,5 @@
 import abc
 from enum import Enum
-from xmlrpc.client import Boolean
 
 class InputDeviceEvent(Enum):
     INCREASE_HOME_SCORE = 0
@@ -23,9 +22,9 @@ class InputDevice(metaclass=abc.ABCMeta):
         raise NotImplemented
 
     @abc.abstractmethod
-    def start_service(self) -> Boolean:
+    def start_service(self) -> bool:
         raise NotImplemented
 
     @abc.abstractmethod
-    def stop_service(self) -> Boolean:
+    def stop_service(self) -> bool:
         raise NotImplemented
