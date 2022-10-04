@@ -8,9 +8,8 @@ from src.player_info import PlayerInfo
 from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
 from threading import Lock
 
-
-# from src.ir_remote_device import IRRemoteDevice
-from src.dummy_device import IRRemoteDevice
+from src.ir_remote_device import IRRemoteDevice
+# from src.dummy_device import IRRemoteDevice
 
 class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
