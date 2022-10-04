@@ -79,6 +79,11 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.input_device_event_check_timer.start()
         self.input_device_event_check_timer.timeout.connect(self.do_check_device_input_event)
 
+        # self.match_time_check_timer = QTimer()
+        # self.match_time_check_timer.setInterval(1)
+        # self.match_time_check_timer.start()
+        # self.match_time_check_timer.timeout.connect(self.do_check_match_time)
+
         self.do_start_input_devices()
 
         # self.show()
@@ -86,10 +91,6 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         red_brush = QBrush(Qt.red)
         black_brush = QBrush(Qt.black)
         white_brush = QBrush(Qt.white)
-
-        # Draw game time
-        qp.setPen(QPen(Qt.white, 1, Qt.SolidLine))
-        qp.drawRoundedRect(self.game_match_time_rect, 15, 15)
 
         qp.setPen(QPen(Qt.black, 1, Qt.SolidLine))
 
@@ -123,6 +124,10 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
                 40, 40)
 
     def draw_game_time(self, qp):
+        # Draw game time
+        qp.setPen(QPen(Qt.white, 1, Qt.SolidLine))
+        qp.drawRoundedRect(self.game_match_time_rect, 15, 15)
+
         minutes = int(self.last_check_match_time.total_seconds() / 60)
         seconds = self.last_check_match_time.total_seconds() % 60
         last_check_match_time = str("%02d:%02d" % (minutes, seconds))
@@ -164,9 +169,10 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.ir_device.stop_service()
 
     # Input Device Event
-    def do_check_device_input_event(self):
-        self.do_cal_match_time()
+    # def do_check_match_time(self):
+    #     self.do_cal_match_time()
 
+    def do_check_device_input_event(self):
         if len(self.input_device_event_list) == 0:
             return
 
@@ -346,7 +352,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         qp = QPainter()
         qp.begin(self)
         self.draw_scoreboard(qp)
-        self.draw_game_time(qp)
+        # self.draw_game_time(qp)
         self.draw_score(qp)
         qp.end()
 
