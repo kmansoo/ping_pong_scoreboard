@@ -1,124 +1,130 @@
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
+
+import pigpio
 from datetime import datetime
 import time
 import threading
 from src.ping_pong_input_device import InputDevice, InputDeviceEventListener, InputDeviceEvent
 
-pin = 12
-
-
 class IRRemoteDevice(InputDevice):
     def __init__(self) :
-        self._work_thread = None
-        self._event_listener = InputDeviceEventListener()
+        self.pi = pigpio.pi()
+        self.gpio = 18
+        self.code_timeout = 5      
+        self.in_code = False
 
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(pin, GPIO.IN)
-        self.Buttons = [ 0x300ff6897, 0x300ff30cf, 0x300ff18e7, 0x300ff7a85, 0x300ff10ef, 0x300ff38c7, 0x300ff5aa5, 0x300ff42bd, 0x300ff4ab5, 0x300ff52ad, 0x300ff9867, 0x300ffb04f, 0x300ffa25d, 0x300ff629d, 0x300ffe21d, 0x300ff22dd, 0x300ff02fd, 0x300ffc23d, 0x300ffe01f, 0x300ffa857, 0x300ff906f]
-        self.ButtonsNames = ["key_0", "key_1", "key_2", "key_3", "key_4", "key_5", "key_6", "key_7", "key_8", "key_9", "key_100", "key_200", "key_channeldown", "key_channel", "key_channelup", "key_prev", "key_next", "key_play", "key_minus", "key_plus", "key_equal" ]
+        self. new_Keys={
+      2209067173 : "CH-", 2475776301 : "CH", 811016773 :"CH+",
+      22461621 : "PREV", 1036916573 : "NEXT", 2338142909 : "PLAY",
+      383079973 : "VOL-", 2749130309 : "VOL+", 4158662973 : "EQ",
+      2266238925 : "0", 3502206629 : "100+", 3131250093 : "200+",
+      1902227973 : "1", 435909485 : "2", 2736323565 : "3",
+      430130277 : "4", 3072262781 : "5", 3890174357 : "6",
+      2890417149 : "7", 2654424341 : "8", 727043261 : "9"
+   }
+      
+        self.pi.set_mode(18, pigpio.INPUT)
+
+        self.cb = self.pi.callback(18, pigpio.EITHER_EDGE, self._cb)
+
 
     def __del__(self):
-        self.stop_service()
+        pass
+        # self.pi.stop()
  
     def set_event_listener(self, listener : InputDeviceEventListener) -> None:
          self._event_listener = listener
 
     def start_service(self) -> bool:
-        if self._work_thread != None:
-            return False
+        # if self._work_thread != None:
+            # return False
 
-        self._work_thread = threading.Thread(target = self.__run)
-
-        self._is_requesting_stop_thread = False
-        self._work_thread.start()
+        # self._work_thread = threading.Thread(target = self.__run)
+        # self._is_requesting_stop_thread = False
+        # self._work_thread.start()
 
         return True
 
     def stop_service(self) -> bool:
-        if self._work_thread == None:
-            return False
-
-        self._is_requesting_stop_thread = True
-        self._work_thread.join()
-        self._work_thread = None
+        # if self._work_thread == None:
+            # return False
+        self.pi.stop()
+        # self._is_requesting_stop_thread = True
+        # self._work_thread.join()
+        # self._work_thread = None
 
         return True
+    def keyAction(self, hash):
+        if hash in self.new_Keys:
+            keyValue = self.new_Keys[hash]
+            if  keyValue == "0" :
+                print("step0")
+                self._event_listener.on_device_new_event(InputDeviceEvent.RESET_SCORE) 
+            elif keyValue == "1" :
+                print("step1")
+                self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
+            elif keyValue == "2" :
+                print("step2")
+                self._event_listener.on_device_new_event(InputDeviceEvent.DECREASE_HOME_SCORE)
+            elif keyValue == "3" :
+                print("step3")
+                self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_VISITOR_SCORE)
+            elif keyValue == "4" :
+                print("step4")
+                self._event_listener.on_device_new_event(InputDeviceEvent.DECREASE_VISITOR_SCORE)
+            elif keyValue == "5" :
+                print("step5")
+                self._event_listener.on_device_new_event(InputDeviceEvent.SWITCH_PLAYER_SIDE)
+            elif keyValue == "9" :
+                print("step9")
+                self._event_listener.on_device_new_event(InputDeviceEvent.SWITCH_SERVER)
 
-    def __run(self):
-        while self._is_requesting_stop_thread == False:
-            Buttons = self.getButtons()
+    def __run(self):               
+        pass
 
-            inData = self.convertHex(self.getBinary()) #Runs subs to get incoming hex value
+    def _hash(self, old_val, new_val):
+        if   new_val < (old_val * 0.60):
+            val = 13
+        elif old_val < (new_val * 0.60):
+            val = 23
+        else:
+            val = 2
 
-            for button in range(len(Buttons)):#Runs through every value in list
-                if hex(Buttons[button]) == inData: #Checks this against incoming
-                    if self._event_listener != None:
-                        self._event_listener.on_device_new_event(InputDeviceEvent.DECREASE_HOME_SCORE)
-                    pass
+        self.hash_val = self.hash_val ^ val
+        self.hash_val *= 16777619 # FNV_PRIME_32
+        self.hash_val = self.hash_val & ((1<<32)-1)
 
-            time.sleep(0.01)   # 1ms
-            
-            continue
+    def _cb(self, gpio, level, tick):
 
-    def getButtons(self) :
-        return self.Buttons
-    
-    def getButtonsNames(self) :
-        return self.ButtonsNames
+        if level != pigpio.TIMEOUT:
 
-    def getBinary(self) :
-        num1s= 0
-        binary=1  # The binary value
-        command=[]  # The list to store pulse times in
-        previousValue=0  # The last value
-        value=GPIO.input(pin)  # The current value
-        while value:
-            time.sleep(0.0001) # This sleep decreases CPU utilization immensely
-            value = GPIO.input(pin)
-        
-        startTime = datetime.now()
-        while True:
-            if previousValue != value:
-                now = datetime.now()
-                pulseTime = now - startTime #Calculate the time of pulse
-                startTime = now #Reset start time
-                command.append((previousValue, pulseTime.microseconds)) #Store recorded data
+            if self.in_code == False:
+                self.in_code = True
+                self.pi.set_watchdog(self.gpio, self.code_timeout)
+                self.hash_val = 2166136261 # FNV_BASIS_32
+                self.edges = 1
+                self.t1 = None
+                self.t2 = None
+                self.t3 = None
+                self.t4 = tick
 
-            if value:
-                num1s += 1
             else:
-                num1s = 0
-            
-            if num1s > 10000:
-                break
+                self.edges += 1
+                self.t1 = self.t2
+                self.t2 = self.t3
+                self.t3 = self.t4
+                self.t4 = tick
 
-            previousValue = value
-            value = GPIO.input(pin)
-        
-        for (typ, tme) in command:
-            if typ == 1: #If looking at rest period
-                if tme > 1000: #If pulse greater than 1000us
-                    binary = binary *10 +1 #Must be 1
-                else:
-                    binary *= 10 #Must be 0
-        
-        if len(str(binary)) > 34: #Sometimes, there is some stray characters
-            binary = int(str(binary)[:34])
+                if self.t1 is not None:
+                    d1 = pigpio.tickDiff(self.t1,self.t2)
+                    d2 = pigpio.tickDiff(self.t3,self.t4)
+                    self._hash(d1, d2)
 
-        return binary
-	
-# Convert value to hex
-    def convertHex(self, binaryValue):
-        tmpB2 = int(str(binaryValue),2) #Temporarely propper base 2
-        return hex(tmpB2)
+        else:
+            if self.in_code:
+                self.in_code = False
+                self.pi.set_watchdog(self.gpio, 0)
 
-	
-    
-    def IRthreadRoutine(self):
-        while True:
-            inData = self.convertHex(self.getBinary()) #Runs subs to get incoming hex value
-            for button in range(len(self.Buttons)):#Runs through every value in list
-                if hex(self.Buttons[button]) == inData: #Checks this against incoming
-                    print(self.ButtonsNames[button]) #Prints corresponding english name for button
-                    # functionName(button)
-    
+                if self.edges > 12:
+                    self.keyAction(self.hash_val)
+   

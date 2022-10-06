@@ -1,3 +1,5 @@
+import datetime
+
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from PyQt5.QtCore import Qt, QPoint, QRect, QTimer
@@ -6,8 +8,8 @@ from src.player_info import PlayerInfo
 from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
 from threading import Lock
 
-# from src.ir_remote_device import IRRemoteDevice
-from src.dummy_device import IRRemoteDevice
+from src.ir_remote_device import IRRemoteDevice
+# from src.dummy_device import IRRemoteDevice
 
 class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
@@ -18,6 +20,9 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.MAX_SCORE_NUM = 11
         self.BLINK_TIMER_INTERVAL = 300
         self.MAX_BLINK_SHOW_COUT = 10
+
+        self.start_match_time   = datetime.datetime.now()
+        self.last_check_match_time = datetime.datetime.now()
 
         self.left_player_info = PlayerInfo()
         self.right_player_info = PlayerInfo()
@@ -34,6 +39,8 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         self.gap_width = 10
         
+        self.game_match_time_rect = QRect(0, 0, 450, 130)
+
         self.left_team_rect = QRect(0, 0, 600, 100)
         self.right_team_rect = QRect(0, 0, 600, 100)
 
@@ -45,13 +52,16 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.left_side_brush = QBrush(QColor(157, 194, 156))
         self.right_side_brush = QBrush(QColor(187, 143, 142))
 
+        # game time
+        self.game_match_time_rect.moveTo(self.center_pos.x() - int(self.game_match_time_rect.width() / 2), 80);
+
         # left score rect
-        self.left_inning_rect.moveTo(self.center_pos.x() - self.left_score_rect.width() - self.left_inning_rect.width() - self.gap_width - int(self.gap_width / 2), 300);
-        self.left_score_rect.moveTo(self.center_pos.x() - self.left_score_rect.width() - int(self.gap_width / 2), 300);
+        self.left_inning_rect.moveTo(self.center_pos.x() - self.left_score_rect.width() - self.left_inning_rect.width() - self.gap_width - int(self.gap_width / 2), 350);
+        self.left_score_rect.moveTo(self.center_pos.x() - self.left_score_rect.width() - int(self.gap_width / 2), 350);
 
         # right score rect
-        self.right_inning_rect.moveTo(self.center_pos.x() + self.right_score_rect.width() + self.gap_width + int(self.gap_width / 2), 300);
-        self.right_score_rect.moveTo(self.center_pos.x() + int(self.gap_width / 2), 300);
+        self.right_inning_rect.moveTo(self.center_pos.x() + self.right_score_rect.width() + self.gap_width + int(self.gap_width / 2), 350);
+        self.right_score_rect.moveTo(self.center_pos.x() + int(self.gap_width / 2), 350);
 
         # name rect
         self.left_team_rect.moveTo(self.center_pos.x() - self.gap_width * 4 - self.left_team_rect.width(), self.left_score_rect.top() - self.left_team_rect.height() - int(self.gap_width / 2))
@@ -69,6 +79,11 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.input_device_event_check_timer.start()
         self.input_device_event_check_timer.timeout.connect(self.do_check_device_input_event)
 
+        # self.match_time_check_timer = QTimer()
+        # self.match_time_check_timer.setInterval(1)
+        # self.match_time_check_timer.start()
+        # self.match_time_check_timer.timeout.connect(self.do_check_match_time)
+
         self.do_start_input_devices()
 
         # self.show()
@@ -76,6 +91,8 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         red_brush = QBrush(Qt.red)
         black_brush = QBrush(Qt.black)
         white_brush = QBrush(Qt.white)
+
+        qp.setPen(QPen(Qt.black, 1, Qt.SolidLine))
 
         # Draw left side
         qp.setBrush(self.left_side_brush)
@@ -105,6 +122,20 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
             qp.drawEllipse(
                 self.right_score_rect.right() - 50, self.right_score_rect.bottom() - 50,
                 40, 40)
+
+    def draw_game_time(self, qp):
+        # Draw game time
+        qp.setPen(QPen(Qt.white, 1, Qt.SolidLine))
+        qp.drawRoundedRect(self.game_match_time_rect, 15, 15)
+
+        minutes = int(self.last_check_match_time.total_seconds() / 60)
+        seconds = self.last_check_match_time.total_seconds() % 60
+        last_check_match_time = str("%02d:%02d" % (minutes, seconds))
+        
+        qp.setPen(QPen(Qt.white, 1))
+        qp.setFont(QFont("Courier New", 120))
+
+        qp.drawText(self.game_match_time_rect, Qt.AlignHCenter|Qt.AlignVCenter|Qt.TextSingleLine, last_check_match_time)
 
     def draw_score(self, qp):
         # draw score
@@ -138,6 +169,9 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.ir_device.stop_service()
 
     # Input Device Event
+    # def do_check_match_time(self):
+    #     self.do_cal_match_time()
+
     def do_check_device_input_event(self):
         if len(self.input_device_event_list) == 0:
             return
@@ -200,12 +234,14 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         return False
 
+    # 
+    def do_cal_match_time(self):
+        cur_match_time = datetime.datetime.now() - self.start_match_time
 
-    # Implement InputDeviceEventListener interface
-    def on_device_new_event(self, new_event : InputDeviceEvent):
-        self.input_device_event_list_mutex.acquire(True)
-        self.input_device_event_list.append(new_event)
-        self.input_device_event_list_mutex.release()
+        if cur_match_time.total_seconds() > self.last_check_match_time.total_seconds():
+            self.last_check_match_time = cur_match_time
+
+            self.repaint(self.game_match_time_rect)
 
     # 
     def do_increase_home_score(self):
@@ -286,6 +322,9 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         if self.show_blink == True:
             return
 
+        self.start_match_time = datetime.datetime.now()
+        self.last_check_match_time = datetime.datetime.now() - self.start_match_time
+
         self.left_player_info.reset()
         self.right_player_info.reset()
 
@@ -302,11 +341,18 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         self.close()
 
+    # Implement InputDeviceEventListener interface
+    def on_device_new_event(self, new_event : InputDeviceEvent):
+        self.input_device_event_list_mutex.acquire(True)
+        self.input_device_event_list.append(new_event)
+        self.input_device_event_list_mutex.release()
+
     # QT Events
     def paintEvent(self, e):
         qp = QPainter()
         qp.begin(self)
         self.draw_scoreboard(qp)
+        # self.draw_game_time(qp)
         self.draw_score(qp)
         qp.end()
 

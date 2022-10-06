@@ -47,13 +47,13 @@ class IRRemoteDevice(InputDevice):
                 self._event_listener.on_device_new_event(InputDeviceEvent.DECREASE_HOME_SCORE)
             ...
             '''
-            if random.randint(0, 30) == 10:
-                key_event = random.randint(0, 9)
+            # if random.randint(0, 30) == 10:
+            #     key_event = random.randint(0, 9)
 
-                if key_event == 0:
-                    self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
-                if key_event == 2:
-                    self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_VISITOR_SCORE)
+            #     if key_event == 0:
+            #         self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_HOME_SCORE)
+            #     if key_event == 2:
+            #         self._event_listener.on_device_new_event(InputDeviceEvent.INCREASE_VISITOR_SCORE)
             
             time.sleep(0.01)   # 10ms  
 
