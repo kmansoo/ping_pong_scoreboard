@@ -10,7 +10,7 @@ pip3 install PyQT5
 
 ## How to launch
 ```
-python3 main.py
+python3 game_board.py
 ```
 
 ## How to use after launching the ping pong scoreboard
