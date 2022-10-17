@@ -1,20 +1,24 @@
+import sys
 import datetime
+from threading import Lock
+
+from PyQt5.QtWidgets import QWidget, QApplication
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from PyQt5.QtCore import Qt, QPoint, QRect, QTimer
 
-from src.player_info import PlayerInfo
-from src.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
-from threading import Lock
+from device.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
+from open_api.open_api_service import *
 
-from src.ir_remote_device import IRRemoteDevice
-# from src.dummy_device import IRRemoteDevice
+from ping_ping.player_info import PlayerInfo
 
 class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
         super().__init__()
         self.init_app()
+
+        # start_open_api_service()
 
     def init_app(self):
         self.MAX_SCORE_NUM = 11
@@ -29,6 +33,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         self.show_blink = False
         self.blink_count = 0
+        self.enable_drawing_match_time = True
 
         self.do_reset_scores()
 
@@ -79,12 +84,13 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.input_device_event_check_timer.start()
         self.input_device_event_check_timer.timeout.connect(self.do_check_device_input_event)
 
-        # self.match_time_check_timer = QTimer()
-        # self.match_time_check_timer.setInterval(1)
-        # self.match_time_check_timer.start()
-        # self.match_time_check_timer.timeout.connect(self.do_check_match_time)
+        if self.enable_drawing_match_time:
+            self.match_time_check_timer = QTimer()
+            self.match_time_check_timer.setInterval(1)
+            self.match_time_check_timer.start()
+            self.match_time_check_timer.timeout.connect(self.do_check_match_time)
 
-        self.do_start_input_devices()
+        # self.do_start_input_devices()
 
         # self.show()
     def draw_scoreboard(self, qp):
@@ -158,19 +164,19 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         # Show who is a active server
 
-    # Input Device Service
-    def do_start_input_devices(self):
-        # Create Input Device
-        self.ir_device = IRRemoteDevice()
-        self.ir_device.set_event_listener(self)
-        self.ir_device.start_service()
+    # # Input Device Service
+    # def do_start_input_devices(self):
+    #     # Create Input Device
+    #     self.ir_device = IRRemoteDevice()
+    #     self.ir_device.set_event_listener(self)
+    #     self.ir_device.start_service()
 
-    def do_stop_input_devices(self):
-        self.ir_device.stop_service()
+    # def do_stop_input_devices(self):
+    #     self.ir_device.stop_service()
 
     # Input Device Event
-    # def do_check_match_time(self):
-    #     self.do_cal_match_time()
+    def do_check_match_time(self):
+        self.do_cal_match_time()
 
     def do_check_device_input_event(self):
         if len(self.input_device_event_list) == 0:
@@ -335,7 +341,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.update()
 
     def end_app(self):
-        self.do_stop_input_devices()
+        # self.do_stop_input_devices()
 
         self.input_device_event_check_timer.stop()
 
@@ -352,7 +358,10 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         qp = QPainter()
         qp.begin(self)
         self.draw_scoreboard(qp)
-        # self.draw_game_time(qp)
+
+        if self.enable_drawing_match_time:
+            self.draw_game_time(qp)
+
         self.draw_score(qp)
         qp.end()
 
@@ -382,4 +391,18 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         # Reset scores
         elif e.key() == Qt.Key_0:
             self.on_device_new_event(InputDeviceEvent.RESET_SCORE)
+
+
+def start_game(argv):
+    app = QApplication(argv)
+    ping_pong_board = PingPongScoreBoardApp()
+
+    start_open_api_service(ping_pong_board)
+
+    app.exec_()
+
+    stop_open_api_service()
+
+    # sys.exit(0)
+
 

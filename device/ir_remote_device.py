@@ -4,7 +4,8 @@ import pigpio
 from datetime import datetime
 import time
 import threading
-from src.ping_pong_input_device import InputDevice, InputDeviceEventListener, InputDeviceEvent
+
+from device.ping_pong_input_device import InputDevice, InputDeviceEventListener, InputDeviceEvent
 
 class IRRemoteDevice(InputDevice):
     def __init__(self) :
@@ -128,3 +129,5 @@ class IRRemoteDevice(InputDevice):
                 if self.edges > 12:
                     self.keyAction(self.hash_val)
    
+def start_ir_device_receiver():
+    pass
