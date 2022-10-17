@@ -6,6 +6,7 @@ This ping pong scoreboard has implemented using Python and PyQT5.
 ## Preparation
 ```
 pip3 install PyQT5
+pip3 install -U Flask
 ```
 
 ## How to launch
