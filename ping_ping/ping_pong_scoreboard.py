@@ -9,7 +9,7 @@ from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from PyQt5.QtCore import Qt, QPoint, QRect, QTimer
 
 from device.ping_pong_input_device import InputDeviceEventListener, InputDeviceEvent
-from open_api.open_api_service import *
+from device.mqtt_key_event_device import MQTTKeyEventDevice
 
 from ping_ping.player_info import PlayerInfo
 
@@ -17,8 +17,6 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
     def __init__(self):
         super().__init__()
         self.init_app()
-
-        # start_open_api_service()
 
     def init_app(self):
         self.MAX_SCORE_NUM = 11
@@ -90,7 +88,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
             self.match_time_check_timer.start()
             self.match_time_check_timer.timeout.connect(self.do_check_match_time)
 
-        # self.do_start_input_devices()
+        self.do_start_input_devices()
 
         # self.show()
     def draw_scoreboard(self, qp):
@@ -164,15 +162,23 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
 
         # Show who is a active server
 
-    # # Input Device Service
-    # def do_start_input_devices(self):
-    #     # Create Input Device
-    #     self.ir_device = IRRemoteDevice()
-    #     self.ir_device.set_event_listener(self)
-    #     self.ir_device.start_service()
+    # Input Device Service
+    def do_start_input_devices(self):
+        # Create Input Device
+        self._mqtt_key_event_device = MQTTKeyEventDevice()
+        self._mqtt_key_event_device.set_event_listener(self)
+        self._mqtt_key_event_device.start_service()
 
-    # def do_stop_input_devices(self):
-    #     self.ir_device.stop_service()
+        # Please add devices if the system has more key event devices
+        # self._ir_device = IRRemoteDevice()
+        # self._ir_device.set_event_listener(self)
+        # self._ir_device.start_service()
+
+    def do_stop_input_devices(self):
+        self._mqtt_key_event_device.stop_service()
+
+        # Please call stop_service() for more devices
+        # self._ir_device.stop_service()
 
     # Input Device Event
     def do_check_match_time(self):
@@ -341,7 +347,7 @@ class PingPongScoreBoardApp(QWidget, InputDeviceEventListener):
         self.update()
 
     def end_app(self):
-        # self.do_stop_input_devices()
+        self.do_stop_input_devices()
 
         self.input_device_event_check_timer.stop()
 
@@ -397,12 +403,6 @@ def start_game(argv):
     app = QApplication(argv)
     ping_pong_board = PingPongScoreBoardApp()
 
-    start_open_api_service(ping_pong_board)
-
     app.exec_()
 
-    stop_open_api_service()
-
     # sys.exit(0)
-
-
